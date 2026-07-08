@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
     <title>Carnival Roulette</title>
     <!-- Tailwind CSS for UI -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -11,60 +11,87 @@
     <!-- GLTFLoader for importing external 3D models -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #060814; font-family: sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background-color: #060814; font-family: sans-serif; user-select: none; touch-action: none; }
         canvas { display: block; }
     </style>
 </head>
 <body>
 
     <!-- HUD Overlay -->
-    <div class="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 z-10">
-        <!-- Top Row: Scores, Lives, and Info -->
-        <div class="flex justify-between items-start w-full">
-            <div class="bg-slate-900/80 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl pointer-events-auto">
-                <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Target Level</div>
-                <div id="levelDisplay" class="text-3xl font-black text-amber-500">STAGE 1</div>
-                <div class="mt-2 text-sm text-slate-200">Pins Needed: <span id="pinsRemaining" class="font-bold text-emerald-400">6</span></div>
+    <div class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-6 z-10">
+        <!-- Top Row: Scores, Mode and Info -->
+        <div class="flex justify-between items-start w-full gap-2">
+            <div class="bg-slate-900/85 backdrop-blur border border-slate-700/60 p-3 md:p-4 rounded-xl shadow-2xl pointer-events-auto">
+                <div class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wider">Target Performance</div>
+                <div id="levelDisplay" class="text-xl md:text-3xl font-black text-amber-500">STAGE 1</div>
+                <div id="gameModeBadge" class="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded uppercase">Endless</div>
             </div>
 
-            <!-- Victim Health & Coin Tracker -->
+            <!-- Voodoo Doll HP, Time / Coin Tracker -->
             <div class="flex flex-col gap-2 items-end">
-                <div class="bg-slate-900/80 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl flex items-center gap-3 pointer-events-auto">
+                <!-- Main Status Bar -->
+                <div class="bg-slate-900/85 backdrop-blur border border-slate-700/60 p-2.5 md:p-3 rounded-xl shadow-2xl flex items-center gap-3 pointer-events-auto">
                     <div class="text-right">
-                        <div class="text-xs text-slate-400 font-bold uppercase">Strap Assistant</div>
-                        <div class="w-32 bg-slate-800 h-3 rounded-full mt-1 overflow-hidden border border-slate-600">
-                            <div id="healthBar" class="bg-red-600 h-full w-full transition-all duration-150"></div>
+                        <div id="healthLabel" class="text-[10px] md:text-xs text-slate-400 font-bold uppercase">Voodoo Doll HP</div>
+                        <!-- Endless Mode: Doll Health -->
+                        <div id="healthBarContainer" class="w-28 md:w-36 bg-slate-800 h-2.5 md:h-3 rounded-full mt-1 overflow-hidden border border-slate-600/50">
+                            <div id="healthBar" class="bg-gradient-to-r from-red-600 to-rose-500 h-full w-full transition-all duration-150"></div>
+                        </div>
+                        <!-- Timed Mode: Remaining seconds -->
+                        <div id="timerDisplay" class="hidden text-xl md:text-2xl font-black text-red-500 tracking-wider">120s</div>
+                    </div>
+                    <span id="healthIcon" class="text-xl md:text-2xl animate-pulse">💀</span>
+                </div>
+
+                <!-- Cooldown, Panic Meter & settings -->
+                <div class="flex gap-2 items-center">
+                    <!-- Endless Mode Only: Panic meter -->
+                    <div id="panicContainer" class="bg-slate-900/85 backdrop-blur border border-slate-700/60 px-2.5 py-1.5 rounded-xl shadow-2xl flex flex-col pointer-events-auto min-w-[90px] text-left">
+                        <div class="text-[8px] font-bold text-rose-400 uppercase tracking-wider">Voodoo Panic</div>
+                        <div class="w-full bg-slate-850 h-1.5 rounded-full mt-0.5 overflow-hidden border border-slate-700/55">
+                            <div id="panicBar" class="bg-purple-600 h-full w-0 transition-all duration-150"></div>
                         </div>
                     </div>
-                    <span class="text-2xl animate-pulse">🩸</span>
-                </div>
 
-                <div class="bg-slate-900/80 backdrop-blur border border-slate-700 px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 pointer-events-auto">
-                    <span class="text-xl text-yellow-400 font-bold">🪙</span>
-                    <span id="coinDisplay" class="text-2xl font-black text-yellow-400">0</span>
+                    <!-- Settings Button -->
+                    <button id="pauseBtn" class="bg-slate-900/85 backdrop-blur border border-slate-700/60 hover:bg-slate-800 text-white p-2.5 rounded-xl shadow-2xl pointer-events-auto transition active:scale-95 cursor-pointer">
+                        ⚙️
+                    </button>
+                    <!-- Coin Indicator -->
+                    <div class="bg-slate-900/85 backdrop-blur border border-slate-700/60 px-3 md:px-4 py-1.5 md:py-2 rounded-xl shadow-2xl flex items-center gap-2 pointer-events-auto">
+                        <span class="text-lg md:text-xl text-yellow-400 font-bold">🪙</span>
+                        <span id="coinDisplay" class="text-lg md:text-2xl font-black text-yellow-400">0</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Center Notification -->
+        <!-- Center Notification Toast -->
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div id="toastNotification" class="bg-red-600/95 text-white font-black px-6 py-3 rounded-xl text-xl shadow-2xl border border-red-400 uppercase tracking-widest scale-0 transition-transform duration-200">
-                CRITICAL HIT! -20HP
+            <div id="toastNotification" class="bg-amber-600/95 text-white font-black px-5 py-2.5 rounded-xl text-sm md:text-lg shadow-2xl border border-amber-400 uppercase tracking-widest scale-0 transition-transform duration-200">
+                CRITICAL IMPACT! -25HP
             </div>
         </div>
 
-        <!-- Bottom Row: Weapon Selector and Action Button -->
+        <!-- Bottom Row: Dynamic Mobile/Desktop Adaptation -->
         <div class="flex flex-col md:flex-row justify-between items-center md:items-end w-full gap-4">
-            <!-- Weapon Shop / Inventory -->
-            <div class="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-2xl shadow-2xl pointer-events-auto max-w-full md:max-w-md w-full">
+            <!-- Desktop Weapon Shop / Inventory (Hidden on mobile screens) -->
+            <div class="hidden md:block bg-slate-900/90 backdrop-blur border border-slate-700/60 p-4 rounded-2xl shadow-2xl pointer-events-auto max-w-md w-full">
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Arsenal Shop</div>
-                <div id="weaponGrid" class="grid grid-cols-3 gap-2">
-                    <!-- Dynamic Loading -->
+                <div id="desktopWeaponGrid" class="grid grid-cols-3 gap-2">
+                    <!-- Loaded dynamically -->
                 </div>
             </div>
 
-            <!-- Throw Action Button with Cooldown Bar -->
-            <div class="bg-slate-900/80 backdrop-blur border border-slate-700 p-4 rounded-xl text-center pointer-events-auto w-full md:w-auto flex flex-col gap-2 min-w-xs">
+            <!-- Mobile Shop Trigger Button -->
+            <div class="md:hidden w-full flex justify-between items-center pointer-events-auto gap-2">
+                <button id="mobileShopOpenBtn" class="bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-lg text-slate-200 font-bold flex items-center gap-2 text-xs transition active:scale-95 cursor-pointer">
+                    ⚔️ Open Arsenal Shop <span class="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded-full border border-amber-500/30">SHOP</span>
+                </button>
+            </div>
+
+            <!-- Desktop Firing HUD controls (Only shown on Desktop) -->
+            <div id="desktopLaunchGroup" class="hidden md:flex bg-slate-900/80 backdrop-blur border border-slate-700/60 p-4 rounded-xl text-center pointer-events-auto w-full md:w-auto flex-col gap-2 min-w-xs">
                 <button id="throwBtn" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black px-8 py-4 rounded-xl text-xl shadow-lg transition transform active:scale-95 cursor-pointer">
                     LAUNCH [SPACE]
                 </button>
@@ -76,54 +103,129 @@
         </div>
     </div>
 
+    <!-- Mobile Tap-To-Shoot Central Frame Box -->
+    <div id="mobileTapTargetBox" class="md:hidden absolute inset-0 z-5 flex items-center justify-center p-12 pointer-events-none">
+        <div class="w-5/6 h-2/5 border-2 border-dashed border-sky-400/40 rounded-2xl flex flex-col items-center justify-center pointer-events-auto bg-slate-950/10 active:bg-sky-500/10 active:border-sky-400/80 transition-all">
+            <span class="text-sky-300/80 font-black text-xs uppercase tracking-widest pointer-events-none shadow-sm">TAP INSIDE BOX TO FIRE</span>
+            <div class="w-24 bg-slate-950 h-1 rounded-full mt-2 overflow-hidden border border-slate-800 pointer-events-none">
+                <div id="cooldownBarMobile" class="bg-amber-400 h-full w-full transition-all duration-75"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Drawer Shop Modal -->
+    <div id="mobileShopDrawer" class="hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm pointer-events-auto flex flex-col justify-end">
+        <div class="bg-slate-900 border-t border-slate-700 rounded-t-3xl max-h-[75vh] flex flex-col p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-lg font-black text-white flex items-center gap-1.5">⚔️ Arsenal Cabinet</h3>
+                    <p class="text-xs text-slate-400">Unlock & equip higher damage weapons</p>
+                </div>
+                <button id="mobileShopCloseBtn" class="text-2xl text-slate-400 hover:text-white p-2 cursor-pointer font-bold">&times;</button>
+            </div>
+            <div id="mobileWeaponGrid" class="grid grid-cols-2 gap-3 overflow-y-auto pb-4">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Pause / Settings Panel Overlay -->
+    <div id="pauseMenuOverlay" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-5">
+            <h2 class="text-3xl font-black text-amber-500 tracking-tight">GAME PAUSED</h2>
+            <p class="text-xs text-slate-400">Adjust parameters or head back to main grounds</p>
+
+            <!-- Volume Settings -->
+            <div class="w-full flex flex-col gap-3 my-2 text-left bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between text-xs font-bold text-slate-300">
+                        <span>🎵 Circus Melody Volume</span>
+                        <span id="musicVolVal">70%</span>
+                    </div>
+                    <input id="musicVolumeSlider" type="range" min="0" max="100" value="70" class="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between text-xs font-bold text-slate-300">
+                        <span>💥 Effects Sound Volume</span>
+                        <span id="sfxVolVal">80%</span>
+                    </div>
+                    <input id="sfxVolumeSlider" type="range" min="0" max="100" value="80" class="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <button id="resumeGameBtn" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-xl shadow-lg transition active:scale-95 cursor-pointer">
+                RESUME PERFORMANCE
+            </button>
+            <button id="restartStageBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold py-3 rounded-xl transition active:scale-95 cursor-pointer">
+                RESTART SHOW
+            </button>
+            <button id="quitToMenuBtn" class="w-full bg-rose-950/40 hover:bg-rose-900/40 border border-rose-800/40 text-rose-300 font-bold py-3 rounded-xl transition active:scale-95 cursor-pointer">
+                QUIT TO MENU
+            </button>
+        </div>
+    </div>
+
     <!-- Main Menu Backdrop -->
-    <div id="menuOverlay" class="absolute inset-0 bg-slate-950/95 z-20 flex flex-col items-center justify-center text-center p-6">
-        <h1 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-slate-100 to-slate-400 tracking-tight mb-2">SIDESHOW ROULETTE 3D</h1>
-        <p class="text-rose-500 font-bold uppercase tracking-widest text-sm mb-8">🎪 Dangerous Circus Act 🎪</p>
+    <div id="menuOverlay" class="absolute inset-0 bg-slate-950/95 z-20 flex flex-col items-center justify-center text-center p-6 overflow-y-auto">
+        <h1 class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-amber-500 tracking-tight mb-1">CARNIVAL ROULETTE</h1>
+        <p class="text-rose-500 font-bold uppercase tracking-widest text-xs md:text-sm mb-6">🎪 The Voodoo Doll Showdown 🎪</p>
         
-        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md text-left mb-8 space-y-3 shadow-xl">
-            <h3 class="font-bold text-slate-200 text-lg">Performance Rules:</h3>
-            <p class="text-sm text-slate-400">1. Click or press <span class="bg-slate-700 text-white px-1.5 py-0.5 rounded">Spacebar</span> to launch your weapon toward the revolving log.</p>
-            <p class="text-sm text-slate-400">2. Stick your target amount of weapons safely into the wood to pass the level.</p>
-            <p class="text-sm text-slate-400 text-red-400 font-semibold">3. WARNING: Hitting the assistant triggers screams, blood splatters, and fails the stage!</p>
-            <p class="text-sm text-slate-400">4. Snag spinning coins on the log to unlock more advanced weapons.</p>
+        <!-- Gamemode Selector Panel -->
+        <div class="w-full max-w-sm mb-6 bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col gap-3">
+            <label class="text-xs text-slate-400 uppercase font-black tracking-wider text-left">Select Performance Act:</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="modeEndlessBtn" class="bg-amber-500 text-slate-950 font-black py-3 rounded-xl border border-amber-300 transition cursor-pointer text-xs md:text-sm">
+                    🎪 ENDLESS<br><span class="text-[9px] opacity-75 font-normal">Survive without filling the Panic Bar</span>
+                </button>
+                <button id="modeTimedBtn" class="bg-slate-800 text-slate-300 hover:bg-slate-750 font-bold py-3 rounded-xl border border-slate-700 transition cursor-pointer text-xs md:text-sm">
+                    ⏱️ TIMED PERFORMANCE<br><span class="text-[9px] opacity-75 font-normal">Destroy target in 120s limit</span>
+                </button>
+            </div>
         </div>
 
-        <button id="startGameBtn" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black px-12 py-5 rounded-2xl text-2xl shadow-xl transition transform hover:scale-105 active:scale-95 cursor-pointer">
-            ENTER THE ARENA
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-md text-left mb-6 space-y-2 shadow-xl">
+            <h3 class="font-bold text-slate-200 text-sm md:text-base">Performance Rules:</h3>
+            <p class="text-xs text-slate-400">1. Click or press <span class="bg-slate-700 text-white px-1.5 py-0.5 rounded text-[10px]">Spacebar</span> (Desktop) or tap within the Central Target Box (Mobile) to launch weapons.</p>
+            <p class="text-xs text-slate-400">2. **Your Goal:** Eliminate the Voodoo Doll on the wheel to progress! Weapon damage scales with cost.</p>
+            <p class="text-xs text-slate-400">3. **Core vs Outer Zones:** Hits to the central skeleton bones of the limbs/head/torso deal critical standard damage. Glancing hits to the outer straw padding deal reduced damage.</p>
+            <p class="text-xs text-slate-400 text-red-400 font-semibold">4. **Endless Danger:** Missing the doll fills up the **Voodoo Panic Bar**. When full, it triggers a catastrophic jumpscare ending your run!</p>
+            <p class="text-xs text-slate-400 text-amber-400 font-semibold">5. **Timed Danger:** Missing the doll results in an immediate **-15s** time penalty!</p>
+        </div>
+
+        <button id="startGameBtn" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black px-10 md:px-12 py-4 md:py-5 rounded-2xl text-xl md:text-2xl shadow-xl transition transform hover:scale-105 active:scale-95 cursor-pointer">
+            ENTER THE PERFORMANCE
         </button>
+    </div>
+
+    <!-- Jumpscare Full-Screen Video & Procedural Backup Overlay -->
+    <div id="jumpscareOverlay" class="hidden absolute inset-0 bg-black z-40 flex items-center justify-center overflow-hidden">
+        <video id="jumpscareVideo" class="hidden w-full h-full object-cover" preload="auto" playsinline></video>
+        <div id="jumpscareBackupUI" class="hidden absolute inset-0 bg-red-950/20 backdrop-brightness-50 flex items-center justify-center overflow-hidden">
+            <div id="jumpscareFlash" class="absolute inset-0 bg-red-600 opacity-0 transition-opacity duration-75"></div>
+            <div class="text-red-500 text-9xl animate-ping font-black uppercase tracking-widest scale-150">💀</div>
+        </div>
     </div>
 
     <!-- Game Over / Victory Overlay -->
-    <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/95 z-20 flex flex-col items-center justify-center text-center p-6">
-        <h2 id="endTitle" class="text-6xl font-black text-red-600 mb-4">GAME OVER</h2>
-        <p id="endDesc" class="text-slate-300 text-xl max-w-md mb-8">The assistant was eliminated! You failed the carnival show.</p>
-        <button id="restartGameBtn" class="bg-white text-black font-black px-10 py-4 rounded-xl text-lg hover:bg-slate-200 transition transform active:scale-95 cursor-pointer">
+    <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center text-center p-6">
+        <h2 id="endTitle" class="text-5xl md:text-6xl font-black text-red-600 mb-4">GAME OVER</h2>
+        <p id="endDesc" class="text-slate-300 text-lg md:text-xl max-w-md mb-8">Performance crashed!</p>
+        <button id="restartGameBtn" class="bg-white text-black font-black px-10 py-4 rounded-xl text-base md:text-lg hover:bg-slate-200 transition transform active:scale-95 cursor-pointer">
             PLAY AGAIN
         </button>
-    </div>
-
-    <!-- Custom Modal Message System -->
-    <div id="customModal" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm z-30 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 max-w-sm w-full p-6 rounded-2xl shadow-2xl text-center">
-            <h3 id="modalTitle" class="text-xl font-bold text-white mb-2">Message</h3>
-            <p id="modalBody" class="text-sm text-slate-400 mb-6">Details here...</p>
-            <button onclick="closeCustomModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 py-2 rounded-lg transition transform active:scale-95">
-                Got it
-            </button>
-        </div>
     </div>
 
     <!-- Script Block -->
     <script>
         // --- GAME CONFIG & DATA REGISTRY ---
         const WEAPONS_DATA = [
-            { id: 'dart', name: 'Dart 🎯', cost: 0, speed: 45, scale: 0.35, type: 'cylinder' },
-            { id: 'shuriken', name: 'Shuriken 🌟', cost: 15, speed: 60, scale: 0.45, type: 'star' },
-            { id: 'arrow', name: 'Arrow 🏹', cost: 40, speed: 50, scale: 0.55, type: 'cone' },
-            { id: 'knife', name: 'Knife 🔪', cost: 75, speed: 55, scale: 0.55, type: 'blade' },
-            { id: 'axe', name: 'Axe 🪓', cost: 150, speed: 35, scale: 0.65, type: 'axe' },
-            { id: 'gun', name: 'Gun 🔫', cost: 300, speed: 85, scale: 0.45, type: 'gun' }
+            { id: 'dart', name: 'Dart 🎯', cost: 0, speed: 45, damage: 10, scale: 0.35, type: 'cylinder' },
+            { id: 'shuriken', name: 'Shuriken 🌟', cost: 15, speed: 60, damage: 18, scale: 0.45, type: 'star' },
+            { id: 'arrow', name: 'Arrow 🏹', cost: 40, speed: 50, damage: 28, scale: 0.55, type: 'cone' },
+            { id: 'knife', name: 'Knife 🔪', cost: 75, speed: 55, damage: 45, scale: 0.55, type: 'blade' },
+            { id: 'axe', name: 'Axe 🪓', cost: 150, speed: 35, damage: 70, scale: 0.65, type: 'axe' },
+            { id: 'gun', name: 'Gun 🔫', cost: 300, speed: 85, damage: 100, scale: 0.45, type: 'gun' }
         ];
 
         let gameState = {
@@ -133,24 +235,24 @@
             level: 1,
             targetPins: 6,
             pinsLanded: 0,
-            humanHealth: 100,
+            dollHP: 100,
+            dollMaxHP: 100,
             isGameRunning: false,
             rotationSpeed: 0.02,
             rotationDirection: 1,
             speedChangeTimer: 0,
             cooldownTimer: 0,
-            cooldownDuration: 0.8 // Cooldown in seconds between throws
+            cooldownDuration: 0.8,
+            gameMode: 'endless', 
+            timeRemaining: 120, 
+            panicLevel: 0, 
+            musicVolume: 0.7,
+            sfxVolume: 0.8,
+            jumpscareActive: false
         };
 
-        // --- CUSTOM MODAL ALERT UTILITY ---
-        function showCustomModal(title, body) {
-            document.getElementById('modalTitle').innerText = title;
-            document.getElementById('modalBody').innerText = body;
-            document.getElementById('customModal').classList.remove('hidden');
-        }
-        function closeCustomModal() {
-            document.getElementById('customModal').classList.add('hidden');
-        }
+        let hasCustomJumpscareVideo = false;
+        const jumpscareVideoUrl = 'assets/videos/jumpscare.mp4';
 
         // --- AUDIO MANAGER WITH PROCEDURAL SYNTH & FILE FALLBACK ---
         class AudioManager {
@@ -172,7 +274,6 @@
                 if (this.ctx) return;
                 this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Preload sounds with check to avoid crashing if server path isn't present
                 Object.entries(this.paths).forEach(([key, path]) => {
                     fetch(path)
                         .then(res => {
@@ -184,28 +285,37 @@
                             this.loadedSounds[key] = audioBuffer;
                         })
                         .catch(() => {
-                            console.log(`Using procedural synth fallback sound for: ${key}`);
+                            // Squelched procedural warnings to secure execution speed
                         });
                 });
 
                 this.startContinuousMusic();
             }
 
+            setMusicVolume(vol) {
+                gameState.musicVolume = vol;
+                if (this.bgMusic) {
+                    this.bgMusic.volume = vol;
+                }
+            }
+
+            setSFXVolume(vol) {
+                gameState.sfxVolume = vol;
+            }
+
             startContinuousMusic() {
                 if (this.musicPlaying) return;
                 
-                // Attempt to load background music loop safely
                 this.bgMusic = new Audio();
                 this.bgMusic.src = 'assets/audio/music.mp3';
                 this.bgMusic.loop = true;
+                this.bgMusic.volume = gameState.musicVolume;
                 
                 this.bgMusic.play()
                     .then(() => {
                         this.musicPlaying = true;
-                        console.log("Music playing dynamically from local assets folder.");
                     })
                     .catch(() => {
-                        console.log("Local assets music loop failed or missing. Using synth music clock.");
                         this.startSynthMusicLoop();
                     });
             }
@@ -215,19 +325,19 @@
                 this.musicPlaying = true;
                 
                 const playStep = () => {
-                    if (!this.musicPlaying) return;
+                    if (!this.musicPlaying || !gameState.isGameRunning) return;
+                    
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
                     osc.connect(gain);
                     gain.connect(this.ctx.destination);
                     
                     osc.type = 'triangle';
-                    // Loop a simple creepy circus chime
                     const notes = [220, 247, 261, 293, 329, 349, 392];
                     const randomNote = notes[Math.floor(Math.random() * notes.length)];
                     osc.frequency.setValueAtTime(randomNote, this.ctx.currentTime);
                     
-                    gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.04 * gameState.musicVolume, this.ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
                     
                     osc.start();
@@ -244,28 +354,32 @@
                     this.ctx.resume();
                 }
 
-                // Play custom asset audio if available
                 if (this.loadedSounds[type]) {
                     const src = this.ctx.createBufferSource();
                     src.buffer = this.loadedSounds[type];
-                    src.connect(this.ctx.destination);
+                    
+                    const gainNode = this.ctx.createGain();
+                    gainNode.gain.setValueAtTime(gameState.sfxVolume, this.ctx.currentTime);
+                    
+                    src.connect(gainNode);
+                    gainNode.connect(this.ctx.destination);
                     src.start(0);
                     return;
                 }
 
-                // Procedural sounds if local files are absent
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
 
                 const now = this.ctx.currentTime;
+                const baseVol = gameState.sfxVolume;
 
                 if (type === 'throw') {
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(500, now);
                     osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.setValueAtTime(0.35 * baseVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
                     osc.start(now);
                     osc.stop(now + 0.2);
@@ -273,25 +387,24 @@
                     osc.type = 'sine';
                     osc.frequency.setValueAtTime(150, now);
                     osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
-                    gain.gain.setValueAtTime(0.7, now);
+                    gain.gain.setValueAtTime(0.7 * baseVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
                     osc.start(now);
                     osc.stop(now + 0.12);
                 } else if (type === 'hit_human') {
-                    // Creepy human scream synthesis
                     osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.linearRampToValueAtTime(650, now + 0.1);
-                    osc.frequency.linearRampToValueAtTime(120, now + 0.55);
-                    gain.gain.setValueAtTime(0.6, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.frequency.setValueAtTime(480, now);
+                    osc.frequency.linearRampToValueAtTime(700, now + 0.1);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.6);
+                    gain.gain.setValueAtTime(0.65 * baseVol, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
                     osc.start(now);
-                    osc.stop(now + 0.6);
+                    osc.stop(now + 0.65);
                 } else if (type === 'coin') {
                     osc.type = 'sine';
-                    osc.frequency.setValueAtTime(659.25, now); // E5
-                    osc.frequency.setValueAtTime(987.77, now + 0.08); // B5
-                    gain.gain.setValueAtTime(0.2, now);
+                    osc.frequency.setValueAtTime(659.25, now); 
+                    osc.frequency.setValueAtTime(987.77, now + 0.08); 
+                    gain.gain.setValueAtTime(0.2 * baseVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
                     osc.start(now);
                     osc.stop(now + 0.3);
@@ -301,11 +414,37 @@
                     osc.frequency.setValueAtTime(329.63, now + 0.1);
                     osc.frequency.setValueAtTime(392.00, now + 0.2);
                     osc.frequency.setValueAtTime(523.25, now + 0.3);
-                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.setValueAtTime(0.25 * baseVol, now);
                     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
                     osc.start(now);
                     osc.stop(now + 0.55);
                 }
+            }
+
+            playJumpscareScreech() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(120, this.ctx.currentTime + 1.2);
+                
+                const osc2 = this.ctx.createOscillator();
+                osc2.type = 'square';
+                osc2.frequency.setValueAtTime(1200, this.ctx.currentTime);
+                osc2.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 1.0);
+                
+                gain.gain.setValueAtTime(1.2 * gameState.sfxVolume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.5);
+                
+                osc.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start();
+                osc.stop(this.ctx.currentTime + 1.5);
+                osc2.start();
+                osc2.stop(this.ctx.currentTime + 1.5);
             }
         }
 
@@ -329,43 +468,46 @@
             return new THREE.CanvasTexture(canvas);
         }
 
-        function createSkinTexture() {
+        function createVoodooDollBurlapTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 256;
             canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffd6a5';
+            ctx.fillStyle = '#a0785a';
             ctx.fillRect(0, 0, 256, 256);
-            // Cute but creepy face
-            ctx.fillStyle = '#1e293b';
-            ctx.beginPath();
-            ctx.arc(80, 100, 15, 0, Math.PI * 2);
-            ctx.arc(176, 100, 15, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#e11d48';
-            ctx.beginPath();
-            ctx.arc(128, 160, 25, 0, Math.PI);
-            ctx.fill();
+            
+            ctx.strokeStyle = '#8c6245';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 256; i += 6) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, 256);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(256, i);
+                ctx.stroke();
+            }
             return new THREE.CanvasTexture(canvas);
         }
 
-        // --- WEBGL ENVIRONMENT SETUP (STANDING POV WITH DEPTH) ---
+        // --- WEBGL PERSPECTIVE & DEPTH SYSTEM ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x04050a);
         scene.fog = new THREE.FogExp2(0x04050a, 0.04);
 
-        // Standing camera setup - locked eye height, angled down at the horizontally oriented stage
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.8, 6.2); // Standing view height
-        camera.lookAt(0, 0.4, 0); // Looking down slightly at the target center
+        camera.position.set(0, 1.8, 6.8); 
+        camera.lookAt(0, 0.4, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
         scene.add(ambientLight);
 
@@ -376,38 +518,39 @@
         spotLight.castShadow = true;
         scene.add(spotLight);
 
-        // Floor Plane (Grounded perspective)
         const floorGeo = new THREE.PlaneGeometry(30, 30);
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0c16, roughness: 0.9 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -2.0; // Physically below the target setup
+        floor.position.y = -2.0; 
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // Helper function to check if local GLB assets can be successfully fetched
         async function testAssetPath(url) {
+            const controller = new AbortController();
+            const signal = controller.signal;
+            const timeout = setTimeout(() => controller.abort(), 250); 
             try {
-                const response = await fetch(url, { method: 'HEAD' });
+                const response = await fetch(url, { method: 'HEAD', signal });
+                clearTimeout(timeout);
                 return response.ok;
             } catch (err) {
+                clearTimeout(timeout);
                 return false;
             }
         }
 
-        // --- LOAD CUSTOM BACKGROUND GLB OR PROCEDURAL FALLBACK ---
+        // --- LOAD CUSTOM BACKGROUND GLB OR PROCEDURAL STAGE ---
         const loader = new THREE.GLTFLoader();
 
         function spawnProceduralStage() {
-            console.log("No custom background GLB found. Spawning premium procedural stage.");
             const stageGeo = new THREE.BoxGeometry(10, 6, 0.5);
-            const stageMat = new THREE.MeshStandardMaterial({ color: 0x5c0d12, roughness: 0.8 }); // Red curtain color
+            const stageMat = new THREE.MeshStandardMaterial({ color: 0x5c0d12, roughness: 0.8 }); 
             const stageWall = new THREE.Mesh(stageGeo, stageMat);
             stageWall.position.set(0, 1, -3);
             stageWall.receiveShadow = true;
             scene.add(stageWall);
 
-            // Side pillars
             const pillarGeo = new THREE.CylinderGeometry(0.3, 0.3, 6, 16);
             const pillarMat = new THREE.MeshStandardMaterial({ color: 0xb58900 });
             const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
@@ -425,24 +568,19 @@
                         const bgModel = gltf.scene;
                         bgModel.position.set(0, -2, -5);
                         scene.add(bgModel);
-                        console.log("Background GLB loaded successfully.");
                     },
                     undefined,
-                    () => {
-                        spawnProceduralStage();
-                    }
+                    () => { spawnProceduralStage(); }
                 );
             } else {
                 spawnProceduralStage();
             }
         });
 
-        // --- REVOLVING TARGET GROUP SETUP ---
+        // --- REVOLVING TARGET LOG SETUP ---
         const targetGroup = new THREE.Group();
-        targetGroup.position.set(0, 0.5, 0); // Positioned comfortably in 3D space
         scene.add(targetGroup);
 
-        // Elegant Wooden Support Stand (Constructing horizontal/depth visual anchors)
         const standGroup = new THREE.Group();
         const baseWoodMat = new THREE.MeshStandardMaterial({ color: 0x3d2510, roughness: 0.8 });
         
@@ -469,7 +607,6 @@
 
         scene.add(standGroup);
 
-        // The Log Object (Horizontal cylinder)
         let logMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9 });
         let textureLoader = new THREE.TextureLoader();
         
@@ -488,86 +625,158 @@
         });
 
         const logGeo = new THREE.CylinderGeometry(2.3, 2.3, 0.6, 64);
-        logGeo.rotateX(Math.PI / 2); // Oriented facing the player
+        logGeo.rotateX(Math.PI / 2); 
         const logMesh = new THREE.Mesh(logGeo, logMat);
         logMesh.castShadow = true;
         logMesh.receiveShadow = true;
         targetGroup.add(logMesh);
 
-        // --- ASSET LOADER FOR STRAPPED HUMAN GLB / FALLBACK ---
-        const humanGroup = new THREE.Group();
-        targetGroup.add(humanGroup);
+        // --- PROCEDURAL 3D VOODOO DOLL MODEL SETUP ---
+        const voodooGroup = new THREE.Group();
+        targetGroup.add(voodooGroup);
 
-        function spawnProceduralDummy() {
-            console.log("No custom assistant GLB found. Generating procedural target dummy.");
-            let skinMat = new THREE.MeshStandardMaterial({ roughness: 0.7 });
-            const targetSkinUrl = 'assets/textures/target_skin.jpg';
-            
-            testAssetPath(targetSkinUrl).then((canLoadSkin) => {
-                if (canLoadSkin) {
-                    textureLoader.load(targetSkinUrl,
-                        (tex) => { skinMat.map = tex; skinMat.needsUpdate = true; },
-                        null,
-                        () => { skinMat.map = createSkinTexture(); skinMat.needsUpdate = true; }
-                    );
-                } else {
-                    skinMat.map = createSkinTexture();
-                    skinMat.needsUpdate = true;
-                }
-            });
+        const burlapMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+        burlapMat.map = createVoodooDollBurlapTexture();
+        burlapMat.needsUpdate = true;
 
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), skinMat);
-            head.position.set(0, 1.1, 0.35);
-            humanGroup.add(head);
+        const stitchingMat = new THREE.MeshStandardMaterial({ color: 0x221105, roughness: 1.0 });
+        const buttonEyeMat1 = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 }); 
+        const buttonEyeMat2 = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 }); 
+        const yarnHairMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.9 });
 
-            const clothesMat = new THREE.MeshStandardMaterial({ color: 0xbe123c, roughness: 0.7 });
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 1.2, 16), clothesMat);
-            body.position.set(0, 0.3, 0.35);
-            body.rotation.x = Math.PI / 2;
-            humanGroup.add(body);
-
-            const limbGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.1, 8);
-            const leftArm = new THREE.Mesh(limbGeo, skinMat);
-            leftArm.position.set(-0.7, 0.6, 0.35);
-            leftArm.rotation.z = Math.PI / 3.5;
-            humanGroup.add(leftArm);
-
-            const rightArm = leftArm.clone();
-            rightArm.position.x = 0.7;
-            rightArm.rotation.z = -Math.PI / 3.5;
-            humanGroup.add(rightArm);
-
-            const leftLeg = new THREE.Mesh(limbGeo, skinMat);
-            leftLeg.position.set(-0.45, -0.5, 0.35);
-            leftLeg.rotation.z = -Math.PI / 6;
-            humanGroup.add(leftLeg);
-
-            const rightLeg = leftLeg.clone();
-            rightLeg.position.x = 0.45;
-            rightLeg.rotation.z = Math.PI / 6;
-            humanGroup.add(rightLeg);
+        function createLimbStitchBand(radius, heightY) {
+            const stitchBand = new THREE.Group();
+            const threadGeo = new THREE.BoxGeometry(0.02, 0.05, 0.02);
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const thread = new THREE.Mesh(threadGeo, stitchingMat);
+                thread.position.set(Math.cos(angle)*radius, heightY, Math.sin(angle)*radius);
+                thread.rotation.y = -angle;
+                thread.rotation.z = Math.PI / 4;
+                stitchBand.add(thread);
+            }
+            return stitchBand;
         }
 
+        // Torso segment (Standing visual along Y-axis, lies flush on Z=0.35 face)
+        const bodyGeo = new THREE.CylinderGeometry(0.30, 0.30, 1.2, 16);
+        const voodooBody = new THREE.Mesh(bodyGeo, burlapMat);
+        voodooBody.position.set(0, 0.3, 0.35); 
+        voodooGroup.add(voodooBody);
+
+        const chestStitch = new THREE.Group();
+        for (let i = -0.4; i <= 0.4; i += 0.15) {
+            const th1 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.02, 0.08), stitchingMat);
+            th1.position.set(0, i, 0.25);
+            th1.rotation.y = Math.PI/2;
+            th1.rotation.z = Math.random()*0.4 - 0.2;
+            chestStitch.add(th1);
+        }
+        voodooBody.add(chestStitch);
+
+        // Head Sphere
+        const headGeo = new THREE.SphereGeometry(0.32, 16, 16);
+        const voodooHead = new THREE.Mesh(headGeo, burlapMat);
+        voodooHead.position.set(0, 1.1, 0.35); 
+        voodooGroup.add(voodooHead);
+
+        const leftEyeGroup = new THREE.Group();
+        const eyeBaseL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.03, 12), buttonEyeMat1);
+        eyeBaseL.rotation.x = Math.PI/2;
+        leftEyeGroup.add(eyeBaseL);
+        const eyStitch1 = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.12, 0.015), stitchingMat);
+        eyStitch1.rotation.z = Math.PI/4;
+        leftEyeGroup.add(eyStitch1);
+        leftEyeGroup.position.set(-0.12, 0.1, 0.28);
+        voodooHead.add(leftEyeGroup);
+
+        const rightEyeGroup = new THREE.Group();
+        const eyeBaseR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12), buttonEyeMat2);
+        eyeBaseR.rotation.x = Math.PI/2;
+        rightEyeGroup.add(eyeBaseR);
+        const eyStitch2 = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.09, 0.015), stitchingMat);
+        eyStitch2.rotation.z = -Math.PI/4;
+        rightEyeGroup.add(eyStitch2);
+        rightEyeGroup.position.set(0.12, 0.1, 0.28);
+        voodooHead.add(rightEyeGroup);
+
+        const mouthStitchGroup = new THREE.Group();
+        const mouthStitches = [];
+        const stitchCoords = [-0.15, -0.1, -0.05, 0.0, 0.05, 0.1, 0.15];
+        
+        stitchCoords.forEach((xPos, idx) => {
+            const threadMesh = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.07, 0.015), stitchingMat);
+            threadMesh.position.set(xPos, -0.12, 0.28);
+            threadMesh.rotation.z = Math.random() * 0.4 - 0.2;
+            mouthStitchGroup.add(threadMesh);
+            mouthStitches.push(threadMesh);
+        });
+        voodooHead.add(mouthStitchGroup);
+
+        const hairGroup = new THREE.Group();
+        for (let i = 0; i < 15; i++) {
+            const strand = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.25, 6), yarnHairMat);
+            strand.position.set((Math.random() - 0.5)*0.38, 0.28 + Math.random()*0.1, (Math.random() - 0.5)*0.3);
+            strand.rotation.set(Math.random()*0.5, 0, Math.random()*0.5);
+            hairGroup.add(strand);
+        }
+        voodooHead.add(hairGroup);
+
+        const neckStitches = createLimbStitchBand(0.18, -0.32);
+        voodooHead.add(neckStitches);
+
+        // FIXED LIMBS SETUP: Cylinders stand vertically along the local Y axis inside their respective translation groups.
+        // Tilts are strictly mapped around the Z rotation axis to remain aligned flat with the X-Y log interface.
+        const leftArmGroup = new THREE.Group();
+        const leftArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.85, 8), burlapMat);
+        leftArmGroup.add(leftArmMesh);
+        leftArmGroup.add(createLimbStitchBand(0.115, 0.35));
+        leftArmGroup.add(createLimbStitchBand(0.115, -0.35));
+        leftArmGroup.position.set(-0.425, 0.65, 0.35);
+        leftArmGroup.rotation.z = 0.942; // Perfect mathematical mirror segment alignment
+        voodooGroup.add(leftArmGroup);
+
+        const rightArmGroup = new THREE.Group();
+        const rightArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.85, 8), burlapMat);
+        rightArmGroup.add(rightArmMesh);
+        rightArmGroup.add(createLimbStitchBand(0.115, 0.35));
+        rightArmGroup.add(createLimbStitchBand(0.115, -0.35));
+        rightArmGroup.position.set(0.425, 0.65, 0.35);
+        rightArmGroup.rotation.z = -0.942; // Mirror counterpart
+        voodooGroup.add(rightArmGroup);
+
+        const leftLegGroup = new THREE.Group();
+        const leftLegMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1.2, 8), burlapMat);
+        leftLegGroup.add(leftLegMesh);
+        leftLegGroup.add(createLimbStitchBand(0.115, 0.52));
+        leftLegGroup.add(createLimbStitchBand(0.115, -0.52));
+        leftLegGroup.position.set(-0.325, -0.5, 0.35);
+        leftLegGroup.rotation.z = 2.729; // Anchored to (-0.15, -0.1) extending to (-0.5, -0.9)
+        voodooGroup.add(leftLegGroup);
+
+        const rightLegGroup = new THREE.Group();
+        const rightLegMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1.2, 8), burlapMat);
+        rightLegGroup.add(rightLegMesh);
+        rightLegGroup.add(createLimbStitchBand(0.115, 0.52));
+        rightLegGroup.add(createLimbStitchBand(0.115, -0.52));
+        rightLegGroup.position.set(0.325, -0.5, 0.35);
+        rightLegGroup.rotation.z = -2.729; // Mirror counterpart
+        voodooGroup.add(rightLegGroup);
+
+        // Standard GLTF External Import Route (Attempts to override procedural dummy model if assets exist)
         const humanUrl = 'assets/models/human.glb';
         testAssetPath(humanUrl).then((canLoadHuman) => {
             if (canLoadHuman) {
                 loader.load(humanUrl,
                     (gltf) => {
+                        voodooGroup.visible = false; 
                         const model = gltf.scene;
-                        // Position aligned flat against rotating log faces
                         model.position.set(0, 0, 0.32);
                         model.scale.set(1.4, 1.4, 1.4);
                         model.rotation.set(0, 0, 0);
-                        humanGroup.add(model);
-                        console.log("Human GLB model loaded successfully.");
-                    },
-                    undefined,
-                    () => {
-                        spawnProceduralDummy();
+                        targetGroup.add(model);
                     }
                 );
-            } else {
-                spawnProceduralDummy();
             }
         });
 
@@ -586,7 +795,6 @@
                 const angle = Math.random() * Math.PI * 2;
                 const radius = 1.1 + Math.random() * 0.9;
                 
-                // Keep coins clear of assistant's primary head safety zone
                 if (angle > 0.4 && angle < 1.1) continue; 
 
                 const coinMesh = new THREE.Mesh(coinGeo, coinMat);
@@ -606,14 +814,14 @@
             const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
 
             switch(type) {
-                case 'shuriken': // Shuriken
+                case 'shuriken': 
                 case 'star':
                     const star1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.15), ironMat);
                     const star2 = star1.clone();
                     star2.rotation.y = Math.PI / 2;
                     group.add(star1, star2);
                     break;
-                case 'arrow': // Arrow
+                case 'arrow': 
                 case 'cone':
                     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 8), woodMat);
                     shaft.rotation.x = Math.PI / 2;
@@ -622,7 +830,7 @@
                     tip.rotation.x = Math.PI / 2;
                     group.add(shaft, tip);
                     break;
-                case 'knife': // Hunting Knife
+                case 'knife': 
                 case 'blade':
                     const blade = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.85), ironMat);
                     blade.position.z = 0.425;
@@ -631,14 +839,14 @@
                     handle.position.z = -0.16;
                     group.add(blade, handle);
                     break;
-                case 'axe': // Tomahawk Axe
+                case 'axe': 
                     const handleAxe = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.1, 8), woodMat);
                     handleAxe.position.set(0, -0.3, 0);
                     const headAxe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.35), ironMat);
                     headAxe.position.set(0, 0.15, 0.18);
                     group.add(handleAxe, headAxe);
                     break;
-                case 'gun': // Flintlock Pistol
+                case 'gun': 
                     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.75, 8), ironMat);
                     barrel.rotation.x = Math.PI / 2;
                     barrel.position.z = 0.25;
@@ -648,7 +856,7 @@
                     break;
                 case 'dart':
                 case 'cylinder':
-                default: // Simple Throwing Dart
+                default: 
                     const bodyD = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.8, 8), ironMat);
                     bodyD.rotation.x = Math.PI / 2;
                     const tail = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x0ea5e9 }));
@@ -662,16 +870,14 @@
 
         // --- FIRST-PERSON HELD WEAPON SETUP ---
         const heldWeaponContainer = new THREE.Group();
-        camera.add(heldWeaponContainer); // Parented to camera for first person stabilization
+        camera.add(heldWeaponContainer); 
         scene.add(camera);
 
-        // Base transform for held weapon placement (Lower right screen space)
         const activeHeldY = -0.45;
         const activeHeldX = 0.45;
         const activeHeldZ = -0.7;
         heldWeaponContainer.position.set(activeHeldX, activeHeldY, activeHeldZ);
 
-        // Muzzle Flash effect container
         const muzzleFlashLight = new THREE.PointLight(0xffaa44, 0, 4);
         muzzleFlashLight.position.set(0.45, -0.2, -0.9);
         camera.add(muzzleFlashLight);
@@ -690,13 +896,11 @@
             const currentData = WEAPONS_DATA[gameState.currentWeaponIndex];
             heldWeaponMesh = buildWeaponMesh(currentData.id);
             
-            // Orient correctly for hand-held view (facing forward towards log)
             heldWeaponMesh.scale.set(currentData.scale * 0.9, currentData.scale * 0.9, currentData.scale * 0.9);
             heldWeaponMesh.rotation.set(0, 0, 0);
             
-            // Adjust specific rotational orientations for hands
             if (currentData.id === 'gun') {
-                heldWeaponMesh.rotation.y = Math.PI; // point barrel forward
+                heldWeaponMesh.rotation.y = Math.PI; 
             } else if (currentData.id === 'axe') {
                 heldWeaponMesh.rotation.x = Math.PI / 4;
             } else if (currentData.id === 'shuriken') {
@@ -708,20 +912,30 @@
             heldWeaponContainer.add(heldWeaponMesh);
         }
 
-        // --- PREDICTIVE TRAJECTORY PATH LINE ---
+        // --- OPTIMIZED PREDICTIVE TRAJECTORY PATH ---
         const trajectoryPoints = [];
         const trajectoryCount = 15;
         const trajectoryGroup = new THREE.Group();
         scene.add(trajectoryGroup);
 
-        const pathDotGeo = new THREE.SphereGeometry(0.02, 6, 6);
-        const pathDotMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+        const pathDotGeo = new THREE.SphereGeometry(0.025, 6, 6);
+        const pathDotMat = new THREE.MeshBasicMaterial({ color: 0xe11d48, transparent: true, opacity: 0.65 }); 
 
         for (let i = 0; i < trajectoryCount; i++) {
             const dot = new THREE.Mesh(pathDotGeo, pathDotMat);
             trajectoryGroup.add(dot);
             trajectoryPoints.push(dot);
         }
+
+        const vStart = new THREE.Vector3();
+        const STRIKE_RING_RADII = [0.58, 0.94]; // 2nd ring, 3rd ring (world units from log center)
+        function randomizeStrikeRing() {
+            const radius = STRIKE_RING_RADII[Math.floor(Math.random() * STRIKE_RING_RADII.length)];
+            vEnd.y = radius;
+        }
+        const vEnd = new THREE.Vector3(0, 0.58, 0.3); // lands on the 2nd or 3rd ring, closer to the log's center
+        const vLerped = new THREE.Vector3();
+        const cWorldPos = new THREE.Vector3();
 
         function updateTrajectoryLine() {
             if (!gameState.isGameRunning || gameState.cooldownTimer > 0) {
@@ -730,18 +944,12 @@
             }
             trajectoryGroup.visible = true;
 
-            // Generate start and end positions in world coords
-            const startPos = new THREE.Vector3();
-            heldWeaponContainer.getWorldPosition(startPos);
-
-            // Predict trajectory destination on Z=0.3 plane (log face)
-            const weaponData = WEAPONS_DATA[gameState.currentWeaponIndex];
-            const endPos = new THREE.Vector3(0, 1.3, 0.3); // Target lock height center point
+            heldWeaponContainer.getWorldPosition(vStart);
 
             for (let i = 0; i < trajectoryCount; i++) {
                 const t = i / (trajectoryCount - 1);
-                const pos = new THREE.Vector3().lerpVectors(startPos, endPos, t);
-                trajectoryPoints[i].position.copy(pos);
+                vLerped.lerpVectors(vStart, vEnd, t);
+                trajectoryPoints[i].position.copy(vLerped);
             }
         }
 
@@ -752,16 +960,16 @@
 
         function spawnBloodParticles(pos) {
             const pCount = 35;
-            const pGeo = new THREE.SphereGeometry(0.05, 6, 6);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0x990000 });
+            const pGeo = new THREE.SphereGeometry(0.045, 6, 6);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0x5e0f11 });
 
             for(let i = 0; i < pCount; i++) {
                 const mesh = new THREE.Mesh(pGeo, pMat);
                 mesh.position.copy(pos);
                 mesh.userData = {
-                    vx: (Math.random() - 0.5) * 0.25,
-                    vy: (Math.random() - 0.2) * 0.25,
-                    vz: (Math.random() + 0.1) * 0.25,
+                    vx: (Math.random() - 0.5) * 0.22,
+                    vy: (Math.random() - 0.2) * 0.22,
+                    vz: (Math.random() + 0.1) * 0.22,
                     life: 1.0
                 };
                 scene.add(mesh);
@@ -769,7 +977,48 @@
             }
         }
 
-        // --- MATH HELPERS FOR EXTREMELY TIGHT COHESIVE LIMB COLLISION ---
+        function triggerThrow() {
+            if (!gameState.isGameRunning || gameState.cooldownTimer > 0) return;
+            
+            audio.play('throw');
+            const data = WEAPONS_DATA[gameState.currentWeaponIndex];
+            const weaponMesh = buildWeaponMesh(data.id);
+            
+            const spawnPos = new THREE.Vector3();
+            heldWeaponContainer.getWorldPosition(spawnPos);
+            
+            weaponMesh.position.copy(spawnPos);
+            weaponMesh.scale.set(data.scale, data.scale, data.scale);
+            
+            if (data.id === 'gun') {
+                muzzleFlashLight.intensity = 2.5;
+                flashSphereMat.opacity = 1.0;
+                heldWeaponContainer.rotation.x = -0.5;
+                heldWeaponContainer.position.z = activeHeldZ + 0.15;
+                setTimeout(() => {
+                    muzzleFlashLight.intensity = 0;
+                    flashSphereMat.opacity = 0;
+                }, 60);
+            } else {
+                heldWeaponContainer.rotation.x = -0.3;
+                heldWeaponContainer.position.z = activeHeldZ + 0.1;
+            }
+
+            scene.add(weaponMesh);
+
+            activeProjectiles.push({
+                mesh: weaponMesh,
+                speed: data.speed,
+                type: data.id,
+                scale: data.scale,
+                startPos: spawnPos.clone()
+            });
+
+            gameState.cooldownTimer = gameState.cooldownDuration;
+            updateUIDisplay();
+        }
+
+        // --- MATH HELPERS FOR FINE-TUNED PRECISION COLLISION ---
         function distanceToSegment(px, py, x1, y1, x2, y2) {
             const dx = x2 - x1;
             const dy = y2 - y1;
@@ -782,78 +1031,35 @@
             return Math.sqrt((px - projX)*(px - projX) + (py - projY)*(py - projY));
         }
 
-        function triggerThrow() {
-            if (!gameState.isGameRunning || gameState.cooldownTimer > 0) return;
-            
-            audio.play('throw');
-            const data = WEAPONS_DATA[gameState.currentWeaponIndex];
-            const weaponMesh = buildWeaponMesh(data.id);
-            
-            // Get precise world coordinate from hand held position to spawn flight projectile
-            const spawnPos = new THREE.Vector3();
-            heldWeaponContainer.getWorldPosition(spawnPos);
-            
-            weaponMesh.position.copy(spawnPos);
-            weaponMesh.scale.set(data.scale, data.scale, data.scale);
-            
-            // Gun visual muzzle flash & recoil triggers
-            if (data.id === 'gun') {
-                muzzleFlashLight.intensity = 2.5;
-                flashSphereMat.opacity = 1.0;
-                // Kickback animation
-                heldWeaponContainer.rotation.x = -0.5;
-                heldWeaponContainer.position.z = activeHeldZ + 0.15;
-                setTimeout(() => {
-                    muzzleFlashLight.intensity = 0;
-                    flashSphereMat.opacity = 0;
-                }, 60);
-            } else {
-                // Thrown items tilt back
-                heldWeaponContainer.rotation.x = -0.3;
-                heldWeaponContainer.position.z = activeHeldZ + 0.1;
-            }
-
-            scene.add(weaponMesh);
-
-            activeProjectiles.push({
-                mesh: weaponMesh,
-                speed: data.speed,
-                type: data.id,
-                scale: data.scale
-            });
-
-            // Start Cooldown lockout
-            gameState.cooldownTimer = gameState.cooldownDuration;
-            updateUIDisplay();
-        }
-
-        // --- IMPACT & REVOLVING LODGE ENGINE ---
+        // --- IMPACT & PERFORMANCE ROTATION ENGINE ---
         function checkCollisions(proj, index) {
             const mesh = proj.mesh;
             
-            // Flying weapon moves forward in space along the Z-axis
             mesh.position.z -= proj.speed * 0.016;
 
-            // Check if weapon has crossed the log's vertical front-face plane
+            const totalDist = proj.startPos.z - vEnd.z;
+            const traveled = proj.startPos.z - mesh.position.z;
+            const t = totalDist !== 0 ? THREE.MathUtils.clamp(traveled / totalDist, 0, 1) : 1;
+            mesh.position.x = THREE.MathUtils.lerp(proj.startPos.x, vEnd.x, t);
+            mesh.position.y = THREE.MathUtils.lerp(proj.startPos.y, vEnd.y, t);
+
             if (mesh.position.z <= 0.3) {
                 const hitX = mesh.position.x;
-                const hitY = mesh.position.y - 0.5; // Offset relative to the log's center position
+                const hitY = mesh.position.y; 
                 const distFromCenter = Math.sqrt(hitX*hitX + hitY*hitY);
 
-                // Complete miss outside the target circle
                 if (distFromCenter > 2.3) {
                     scene.remove(mesh);
                     activeProjectiles.splice(index, 1);
+                    handleMissPenalty();
                     return;
                 }
 
-                // Check coin collection collisions
                 for(let i = targetCoins.length - 1; i >= 0; i--) {
                     const coin = targetCoins[i];
-                    const cWPos = new THREE.Vector3();
-                    coin.getWorldPosition(cWPos);
+                    coin.getWorldPosition(cWorldPos);
 
-                    if (mesh.position.distanceTo(cWPos) < 0.35) {
+                    if (mesh.position.distanceTo(cWorldPos) < 0.35) {
                         gameState.coins += 10;
                         updateUIDisplay();
                         audio.play('coin');
@@ -862,84 +1068,87 @@
                     }
                 }
 
-                // Convert hit point into localized angle space relative to current log rotation
                 const currentLogAngle = targetGroup.rotation.z;
                 const localAngle = Math.atan2(hitY, hitX) - currentLogAngle;
 
-                // --- COMPREHENSIVE CYLINDRICAL/SPHERICAL TIGHT HUMAN HURTBOX CHECK ---
-                let hitCritical = false; // Torso / Head
-                let hitLimb = false;     // Arms / Legs
+                let hitCoreSkeleton = false; 
+                let hitOuterThinZone = false;     
                 
                 const testYLocal = Math.sin(localAngle) * distFromCenter;
                 const testXLocal = Math.cos(localAngle) * distFromCenter;
 
-                // 1. Precise Head Sphere Check (Head radius is 0.32 centered at Y=1.1, X=0)
+                // A. Precise Head Sphere Check (Inner Core vs Outer Envelope)
                 const distToHeadCenter = Math.sqrt(testXLocal*testXLocal + (testYLocal - 1.1)*(testYLocal - 1.1));
-                if (distToHeadCenter <= 0.32) {
-                    hitCritical = true;
+                if (distToHeadCenter <= 0.20) {
+                    hitCoreSkeleton = true;
+                } else if (distToHeadCenter <= 0.35) {
+                    hitOuterThinZone = true;
                 }
                 
-                // 2. Precise Torso Cylindrical Segment Check (Cylinder spanning from Y=-0.3 to Y=0.9, radius 0.22)
-                if (!hitCritical) {
+                // B. Precise Torso Check (Inner Core vs Outer Envelope)
+                if (!hitCoreSkeleton) {
                     const distToTorsoLine = distanceToSegment(testXLocal, testYLocal, 0, -0.3, 0, 0.9);
-                    if (distToTorsoLine <= 0.22) {
-                        hitCritical = true;
+                    if (distToTorsoLine <= 0.12) {
+                        hitCoreSkeleton = true;
+                    } else if (distToTorsoLine <= 0.25) {
+                        hitOuterThinZone = true;
                     }
                 }
 
-                // 3. TIGHT Segment Checks for angled Limbs (Cylinder radius is 0.08)
-                if (!hitCritical) {
-                    // Left Arm: Shoulder (0.0, 0.3) extending left-upward at rotation PI/3.5 (approx dx = -0.7, dy = 0.6)
+                // C. Precise Angled Limb Checks
+                if (!hitCoreSkeleton && !hitOuterThinZone) {
                     const leftArmDist = distanceToSegment(testXLocal, testYLocal, -0.15, 0.45, -0.7, 0.85);
-                    // Right Arm: Shoulder (0.0, 0.3) extending right-upward
                     const rightArmDist = distanceToSegment(testXLocal, testYLocal, 0.15, 0.45, 0.7, 0.85);
-                    // Left Leg: Hip extending left-downward
                     const leftLegDist = distanceToSegment(testXLocal, testYLocal, -0.15, -0.1, -0.5, -0.9);
-                    // Right Leg: Hip extending right-downward
                     const rightLegDist = distanceToSegment(testXLocal, testYLocal, 0.15, -0.1, 0.5, -0.9);
 
-                    if (leftArmDist <= 0.08 || rightArmDist <= 0.08 || leftLegDist <= 0.08 || rightLegDist <= 0.08) {
-                        hitLimb = true;
+                    if (leftArmDist <= 0.05 || rightArmDist <= 0.05 || leftLegDist <= 0.05 || rightLegDist <= 0.05) {
+                        hitCoreSkeleton = true;
+                    } 
+                    else if (leftArmDist <= 0.12 || rightArmDist <= 0.12 || leftLegDist <= 0.12 || rightLegDist <= 0.12) {
+                        hitOuterThinZone = true;
                     }
                 }
 
-                if (hitCritical) {
-                    // Critical punishment hit (Torso/Head)
-                    gameState.humanHealth = Math.max(0, gameState.humanHealth - 20);
+                if (hitCoreSkeleton) {
+                    const currentWeapon = WEAPONS_DATA[gameState.currentWeaponIndex];
+                    const fullDmg = currentWeapon.damage;
+                    
+                    gameState.dollHP = Math.max(0, gameState.dollHP - fullDmg);
                     audio.play('hit_human');
                     spawnBloodParticles(mesh.position);
-                    triggerToast("CRITICAL HIT! HUMAN CORE -20HP");
+                    triggerToast(`CORE HIT! -${fullDmg}HP`);
                     
                     scene.remove(mesh);
                     activeProjectiles.splice(index, 1);
+                    gameState.panicLevel = Math.max(0, gameState.panicLevel - 8);
                     
                     updateUIDisplay();
-                    checkGameOverConditions();
+                    checkLevelCompletion();
                 } 
-                else if (hitLimb) {
-                    // Minor hit (Arms/Legs)
-                    gameState.humanHealth = Math.max(0, gameState.humanHealth - 5);
+                else if (hitOuterThinZone) {
+                    const currentWeapon = WEAPONS_DATA[gameState.currentWeaponIndex];
+                    const softDmg = Math.floor(currentWeapon.damage * 0.5);
+                    
+                    gameState.dollHP = Math.max(0, gameState.dollHP - softDmg);
                     audio.play('hit_human');
                     spawnBloodParticles(mesh.position);
-                    triggerToast("LIMB DAMAGE! ASSISTANT SCRATCHED -5HP");
+                    triggerToast(`GLANCING GRAZE! -${softDmg}HP`);
                     
                     scene.remove(mesh);
                     activeProjectiles.splice(index, 1);
                     
                     updateUIDisplay();
-                    checkGameOverConditions();
+                    checkLevelCompletion();
                 }
                 else {
-                    // Safe Impact - Embeds weapon smoothly inside the revolving log group
                     audio.play('hit_wood');
                     scene.remove(mesh);
                     
-                    // Re-instantiate weapon directly inside the rotating log coordinates
                     const pinnedMesh = buildWeaponMesh(proj.type);
                     pinnedMesh.position.set(Math.cos(localAngle) * distFromCenter, Math.sin(localAngle) * distFromCenter, 0.3);
                     pinnedMesh.rotation.z = localAngle + Math.PI/2;
                     
-                    // Satisfy feature request 3: Make the stuck projectiles visibly bigger in size
                     const stuckScale = proj.scale * 1.7;
                     pinnedMesh.scale.set(stuckScale, stuckScale, stuckScale);
                     
@@ -947,10 +1156,22 @@
                     embeddedWeapons.push(pinnedMesh);
                     activeProjectiles.splice(index, 1);
 
-                    gameState.pinsLanded++;
-                    updateUIDisplay();
-                    checkLevelCompletion();
+                    handleMissPenalty();
                 }
+            }
+        }
+
+        function handleMissPenalty() {
+            if (gameState.gameMode === 'endless') {
+                gameState.panicLevel = Math.min(100, gameState.panicLevel + 16);
+                triggerToast(`PANIC CHARGED! Voodoo Power rising`);
+                updateUIDisplay();
+                checkGameOverConditions();
+            } else {
+                gameState.timeRemaining = Math.max(0, gameState.timeRemaining - 15);
+                triggerToast(`⏱️ MISS PENALTY! -15 SECONDS`);
+                checkGameOverConditions();
+                updateUIDisplay();
             }
         }
 
@@ -958,8 +1179,26 @@
         function updateUIDisplay() {
             document.getElementById('coinDisplay').innerText = gameState.coins;
             document.getElementById('levelDisplay').innerText = `STAGE ${gameState.level}`;
-            document.getElementById('pinsRemaining').innerText = Math.max(0, gameState.targetPins - gameState.pinsLanded);
-            document.getElementById('healthBar').style.width = `${gameState.humanHealth}%`;
+            
+            const healthPercent = (gameState.dollHP / gameState.dollMaxHP) * 100;
+            document.getElementById('healthBar').style.width = `${healthPercent}%`;
+            
+            if (gameState.gameMode === 'endless') {
+                document.getElementById('healthBarContainer').style.display = 'block';
+                document.getElementById('timerDisplay').style.display = 'none';
+                document.getElementById('healthLabel').innerText = `Doll HP (${gameState.dollHP}/${gameState.dollMaxHP})`;
+                document.getElementById('healthIcon').innerText = "💀";
+                
+                document.getElementById('panicContainer').style.display = 'flex';
+                document.getElementById('panicBar').style.width = `${gameState.panicLevel}%`;
+            } else {
+                document.getElementById('healthBarContainer').style.display = 'block';
+                document.getElementById('panicContainer').style.display = 'none';
+                document.getElementById('timerDisplay').style.display = 'block';
+                document.getElementById('timerDisplay').innerText = `${Math.ceil(gameState.timeRemaining)}s`;
+                document.getElementById('healthLabel').innerText = `Doll HP (${gameState.dollHP}/${gameState.dollMaxHP})`;
+                document.getElementById('healthIcon').innerText = "⏱️";
+            }
             
             renderWeaponShop();
         }
@@ -976,8 +1215,11 @@
         }
 
         function renderWeaponShop() {
-            const grid = document.getElementById('weaponGrid');
-            grid.innerHTML = '';
+            const desktopGrid = document.getElementById('desktopWeaponGrid');
+            const mobileGrid = document.getElementById('mobileWeaponGrid');
+            
+            desktopGrid.innerHTML = '';
+            mobileGrid.innerHTML = '';
 
             WEAPONS_DATA.forEach((w, idx) => {
                 const isUnlocked = gameState.unlockedWeapons.includes(w.id);
@@ -988,55 +1230,67 @@
 
                 if (isCurrent) {
                     btnClass += "bg-amber-500 text-slate-950 border-amber-300";
-                    actionMarkup = "<span class='opacity-90'>EQUIPPED</span>";
+                    actionMarkup = `<span class='opacity-90 text-[10px]'>DMG: ${w.damage}</span>`;
                 } else if (isUnlocked) {
-                    btnClass += "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 cursor-pointer";
-                    actionMarkup = "<span class='text-[10px] text-emerald-400'>READY</span>";
+                    btnClass += "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700";
+                    actionMarkup = `<span class='text-[10px] text-emerald-400'>DMG: ${w.damage}</span>`;
                 } else {
-                    btnClass += "bg-slate-950 text-slate-500 border-slate-900 opacity-60 hover:opacity-100 cursor-pointer";
+                    btnClass += "bg-slate-950 text-slate-500 border-slate-900 opacity-60 hover:opacity-100";
                     actionMarkup = `<span class='text-[10px] text-yellow-400'>🪙 ${w.cost}</span>`;
                 }
 
-                const card = document.createElement('div');
-                card.className = btnClass;
-                card.innerHTML = `<div>${w.name}</div>${actionMarkup}`;
-                
-                card.onclick = () => {
-                    if (!isUnlocked) {
-                        if (gameState.coins >= w.cost) {
-                            gameState.coins -= w.cost;
-                            gameState.unlockedWeapons.push(w.id);
-                            gameState.currentWeaponIndex = idx;
-                            audio.play('unlock');
-                            refreshHeldWeaponModel();
-                            triggerToast(`Unlocked ${w.name}!`);
-                        } else {
-                            triggerToast("NOT ENOUGH COINS!");
-                        }
-                    } else {
-                        gameState.currentWeaponIndex = idx;
-                        refreshHeldWeaponModel();
-                    }
-                    updateUIDisplay();
-                };
+                const dCard = document.createElement('div');
+                dCard.className = btnClass + " cursor-pointer";
+                dCard.innerHTML = `<div>${w.name}</div>${actionMarkup}`;
+                dCard.onclick = () => selectOrBuyWeapon(idx, w, isUnlocked);
+                desktopGrid.appendChild(dCard);
 
-                grid.appendChild(card);
+                const mCard = document.createElement('div');
+                mCard.className = btnClass + " p-3 cursor-pointer text-sm";
+                mCard.innerHTML = `<div>${w.name}</div>${actionMarkup}`;
+                mCard.onclick = () => {
+                    selectOrBuyWeapon(idx, w, isUnlocked);
+                    toggleMobileShop(false);
+                };
+                mobileGrid.appendChild(mCard);
             });
         }
 
+        function selectOrBuyWeapon(idx, w, isUnlocked) {
+            if (!isUnlocked) {
+                if (gameState.coins >= w.cost) {
+                    gameState.coins -= w.cost;
+                    gameState.unlockedWeapons.push(w.id);
+                    gameState.currentWeaponIndex = idx;
+                    audio.play('unlock');
+                    refreshHeldWeaponModel();
+                    triggerToast(`Unlocked ${w.name}!`);
+                } else {
+                    triggerToast("NOT ENOUGH COINS!");
+                }
+            } else {
+                gameState.currentWeaponIndex = idx;
+                refreshHeldWeaponModel();
+            }
+            updateUIDisplay();
+        }
+
         function checkLevelCompletion() {
-            if (gameState.pinsLanded >= gameState.targetPins) {
-                // Clear out embedded projectiles
+            if (gameState.dollHP <= 0) {
                 embeddedWeapons.forEach(w => targetGroup.remove(w));
                 embeddedWeapons = [];
                 
                 gameState.level++;
+                gameState.dollMaxHP = 100 + (gameState.level - 1) * 50; 
+                gameState.dollHP = gameState.dollMaxHP;
                 gameState.pinsLanded = 0;
-                gameState.targetPins = 5 + gameState.level;
+                
                 gameState.rotationSpeed = 0.015 + (gameState.level * 0.007);
+                gameState.panicLevel = Math.max(0, gameState.panicLevel - 30); 
                 
-                gameState.coins += 25; // Bonus coins on clearing stages
+                gameState.coins += 35; 
                 
+                randomizeStrikeRing();
                 triggerToast(`🏆 LEVEL ${gameState.level} STARTED!`);
                 spawnCoinsOnLog();
                 updateUIDisplay();
@@ -1044,12 +1298,94 @@
         }
 
         function checkGameOverConditions() {
-            if (gameState.humanHealth <= 0) {
-                gameState.isGameRunning = false;
-                document.getElementById('endTitle').innerText = "PERFORMANCE OVER";
-                document.getElementById('endDesc').innerText = `You failed the performance at Stage ${gameState.level}! Total coins won: 🪙${gameState.coins}.`;
-                document.getElementById('gameOverOverlay').classList.remove('hidden');
+            if (gameState.jumpscareActive) return;
+
+            if (gameState.gameMode === 'endless' && gameState.panicLevel >= 100) {
+                triggerPanicJumpscare();
+            } else if (gameState.gameMode === 'timed' && gameState.timeRemaining <= 0) {
+                triggerGameOver("TIME IS UP!", `Performance Time Out! You reached Stage ${gameState.level} and collected 🪙${gameState.coins} Coins!`);
             }
+        }
+
+        // Creepy Jumpscare Sequence Trigger (Favors Custom MP4 video if available)
+        function triggerPanicJumpscare() {
+            gameState.isGameRunning = false;
+            gameState.jumpscareActive = true;
+            
+            const jumpscareOverlay = document.getElementById('jumpscareOverlay');
+            jumpscareOverlay.classList.remove('hidden');
+
+            const videoEl = document.getElementById('jumpscareVideo');
+            const backupUI = document.getElementById('jumpscareBackupUI');
+
+            if (hasCustomJumpscareVideo) {
+                videoEl.classList.remove('hidden');
+                backupUI.classList.add('hidden');
+                videoEl.currentTime = 0;
+                videoEl.volume = gameState.sfxVolume;
+                
+                videoEl.play()
+                    .then(() => {
+                        console.log("Playing custom MP4 jumpscare video.");
+                    })
+                    .catch(() => {
+                        showProceduralJumpscare(backupUI);
+                    });
+
+                videoEl.onended = () => {
+                    cleanupAndGameOver();
+                };
+                
+                // Safety callback timeout in case video loading hangs
+                setTimeout(() => {
+                    cleanupAndGameOver();
+                }, 6000);
+
+            } else {
+                showProceduralJumpscare(backupUI);
+            }
+
+            function showProceduralJumpscare(backupEl) {
+                videoEl.classList.add('hidden');
+                backupEl.classList.remove('hidden');
+                const flash = document.getElementById('jumpscareFlash');
+                
+                audio.playJumpscareScreech();
+
+                let flashState = true;
+                const strobeInterval = setInterval(() => {
+                    flash.style.opacity = flashState ? '0.85' : '0';
+                    flashState = !flashState;
+                }, 60);
+
+                let elapsed = 0;
+                const jumpscareZoomLoop = () => {
+                    if (elapsed < 1.4) {
+                        elapsed += 0.016;
+                        camera.position.z = THREE.MathUtils.lerp(camera.position.z, 1.2, 0.15);
+                        camera.position.y = THREE.MathUtils.lerp(camera.position.y, 1.5, 0.15);
+                        camera.lookAt(0, 1.1, 0.35); 
+                        requestAnimationFrame(jumpscareZoomLoop);
+                    } else {
+                        clearInterval(strobeInterval);
+                        cleanupAndGameOver();
+                    }
+                };
+                jumpscareZoomLoop();
+            }
+
+            function cleanupAndGameOver() {
+                videoEl.pause();
+                jumpscareOverlay.classList.add('hidden');
+                triggerGameOver("VOODOO CURSE!", `The Doll's Panic bar filled up entirely, invoking a dark jumpscare spell on Stage ${gameState.level}!`);
+            }
+        }
+
+        function triggerGameOver(title, desc) {
+            gameState.isGameRunning = false;
+            document.getElementById('endTitle').innerText = title;
+            document.getElementById('endDesc').innerText = desc;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
         }
 
         function restartGame() {
@@ -1059,16 +1395,47 @@
             activeProjectiles = [];
             
             gameState.level = 1;
-            gameState.targetPins = 6;
+            gameState.dollMaxHP = 100;
+            gameState.dollHP = 100;
             gameState.pinsLanded = 0;
-            gameState.humanHealth = 100;
+            gameState.timeRemaining = 120;
+            gameState.panicLevel = 0;
             gameState.rotationSpeed = 0.02;
             gameState.isGameRunning = true;
+            gameState.jumpscareActive = false;
 
+            randomizeStrikeRing();
+
+            camera.position.set(0, 1.8, 6.8);
+            camera.lookAt(0, 0.4, 0);
+
+            document.getElementById('jumpscareOverlay').classList.add('hidden');
             document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('pauseMenuOverlay').classList.add('hidden');
+            
             spawnCoinsOnLog();
             refreshHeldWeaponModel();
             updateUIDisplay();
+        }
+
+        // --- PAUSE MENU CONTROL HANDLING ---
+        function togglePauseMenu(isPaused) {
+            if (isPaused) {
+                gameState.isGameRunning = false;
+                document.getElementById('pauseMenuOverlay').classList.remove('hidden');
+            } else {
+                gameState.isGameRunning = true;
+                document.getElementById('pauseMenuOverlay').classList.add('hidden');
+            }
+        }
+
+        function toggleMobileShop(isOpen) {
+            const drawer = document.getElementById('mobileShopDrawer');
+            if (isOpen) {
+                drawer.classList.remove('hidden');
+            } else {
+                drawer.classList.add('hidden');
+            }
         }
 
         // --- INTERACTION & EVENTS ENGINE ---
@@ -1080,6 +1447,57 @@
 
         document.getElementById('restartGameBtn').onclick = restartGame;
         document.getElementById('throwBtn').onclick = triggerThrow;
+        document.getElementById('pauseBtn').onclick = () => togglePauseMenu(true);
+        document.getElementById('resumeGameBtn').onclick = () => togglePauseMenu(false);
+        document.getElementById('restartStageBtn').onclick = restartGame;
+        
+        document.getElementById('quitToMenuBtn').onclick = () => {
+            document.getElementById('pauseMenuOverlay').classList.add('hidden');
+            document.getElementById('menuOverlay').classList.remove('hidden');
+            gameState.isGameRunning = false;
+        };
+
+        document.getElementById('mobileTapTargetBox').onclick = (e) => {
+            e.preventDefault();
+            triggerThrow();
+        };
+
+        document.getElementById('modeEndlessBtn').onclick = () => {
+            gameState.gameMode = 'endless';
+            document.getElementById('gameModeBadge').innerText = "Endless";
+            document.getElementById('modeEndlessBtn').className = "bg-amber-500 text-slate-950 font-black py-3 rounded-xl border border-amber-300 transition text-xs md:text-sm";
+            document.getElementById('modeTimedBtn').className = "bg-slate-800 text-slate-300 hover:bg-slate-750 font-bold py-3 rounded-xl border border-slate-700 transition text-xs md:text-sm";
+        };
+
+        document.getElementById('modeTimedBtn').onclick = () => {
+            gameState.gameMode = 'timed';
+            document.getElementById('gameModeBadge').innerText = "Timed Act";
+            document.getElementById('modeTimedBtn').className = "bg-amber-500 text-slate-950 font-black py-3 rounded-xl border border-amber-300 transition text-xs md:text-sm";
+            document.getElementById('modeEndlessBtn').className = "bg-slate-800 text-slate-300 hover:bg-slate-750 font-bold py-3 rounded-xl border border-slate-700 transition text-xs md:text-sm";
+        };
+
+        const musicVolSlider = document.getElementById('musicVolumeSlider');
+        musicVolSlider.oninput = (e) => {
+            const vol = parseFloat(e.target.value) / 100;
+            audio.setMusicVolume(vol);
+            document.getElementById('musicVolVal').innerText = `${e.target.value}%`;
+        };
+
+        const sfxVolSlider = document.getElementById('sfxVolumeSlider');
+        sfxVolSlider.oninput = (e) => {
+            const vol = parseFloat(e.target.value) / 100;
+            audio.setSFXVolume(vol);
+            document.getElementById('sfxVolVal').innerText = `${e.target.value}%`;
+        };
+
+        document.getElementById('mobileShopOpenBtn').onclick = () => toggleMobileShop(true);
+        document.getElementById('mobileShopCloseBtn').onclick = () => toggleMobileShop(false);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
@@ -1088,47 +1506,68 @@
             }
         });
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // Precheck if customized MP4 jumpscare exists in assets
+        testAssetPath(jumpscareVideoUrl).then((canLoad) => {
+            if (canLoad) {
+                hasCustomJumpscareVideo = true;
+                const videoEl = document.getElementById('jumpscareVideo');
+                videoEl.src = jumpscareVideoUrl;
+            }
         });
 
         // --- MAIN QUANTUM TICK ANIMATION LOOP ---
         const clock = new THREE.Clock();
+        let expressionTimeAccumulator = 0;
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
             if (gameState.isGameRunning) {
-                // Dynamic back-and-forth circus spins
                 gameState.speedChangeTimer += delta;
                 if (gameState.speedChangeTimer > 3.0) {
                     gameState.speedChangeTimer = 0;
                     if(Math.random() > 0.5) {
-                        gameState.rotationDirection *= -1; // Reverse rotation directions randomly
+                        gameState.rotationDirection *= -1; 
                     }
                 }
 
                 targetGroup.rotation.z += gameState.rotationSpeed * gameState.rotationDirection;
 
-                // Process active flight projectile mechanics
                 for (let i = activeProjectiles.length - 1; i >= 0; i--) {
                     checkCollisions(activeProjectiles[i], i);
                 }
 
-                // Cooldown management & held weapon animation (rise-up & recoil)
+                if (gameState.gameMode === 'timed') {
+                    gameState.timeRemaining -= delta;
+                    updateUIDisplay();
+                    checkGameOverConditions();
+                }
+
+                // --- VOODOO FACE ACTIVE ANIMATION SYSTEM ---
+                expressionTimeAccumulator += delta;
+                
+                const baseSmileIntensity = 1 + (gameState.panicLevel / 100) * 1.8;
+                
+                mouthStitches.forEach((stitch, i) => {
+                    const wave = Math.sin(expressionTimeAccumulator * 8 + i) * 0.015 * baseSmileIntensity;
+                    stitch.scale.y = 1 + (gameState.panicLevel / 100) * 0.8 + Math.cos(expressionTimeAccumulator * 4 + i) * 0.15;
+                    stitch.position.y = -0.12 + Math.abs(stitchCoords[i]) * 0.18 * baseSmileIntensity + wave;
+                });
+
+                if (Math.random() > 0.97) {
+                    const eyeScale = 1.0 + Math.random() * 0.3 * (1 + gameState.panicLevel / 100);
+                    leftEyeGroup.scale.set(eyeScale, eyeScale, eyeScale);
+                    rightEyeGroup.scale.set(eyeScale, 1 / eyeScale, eyeScale);
+                }
+                
                 if (gameState.cooldownTimer > 0) {
                     gameState.cooldownTimer -= delta;
                     if (gameState.cooldownTimer < 0) gameState.cooldownTimer = 0;
 
                     const cooldownRatio = gameState.cooldownTimer / gameState.cooldownDuration;
-                    
-                    // Rises up from bottom and slowly floats back into standard held space
                     heldWeaponContainer.position.y = activeHeldY - (cooldownRatio * 0.8);
                     
-                    // Smoothly recover from recoil kickback angles & depths
                     heldWeaponContainer.rotation.x = THREE.MathUtils.lerp(heldWeaponContainer.rotation.x, 0, 0.1);
                     heldWeaponContainer.position.z = THREE.MathUtils.lerp(heldWeaponContainer.position.z, activeHeldZ, 0.1);
                 } else {
@@ -1137,21 +1576,23 @@
                     heldWeaponContainer.rotation.x = 0;
                 }
 
-                // Smoothly update the visual predicted trajectory path
                 updateTrajectoryLine();
 
-                // Dynamic CSS cooldown HUD visual bar update
                 const cooldownPercent = (1 - (gameState.cooldownTimer / gameState.cooldownDuration)) * 100;
-                document.getElementById('cooldownBar').style.width = `${cooldownPercent}%`;
+                
+                const barD = document.getElementById('cooldownBar');
+                if (barD) barD.style.width = `${cooldownPercent}%`;
+                
+                const barM = document.getElementById('cooldownBarMobile');
+                if (barM) barM.style.width = `${cooldownPercent}%`;
             }
 
-            // Animate blood particles with physical gravity
             for(let i = bloodParticles.length - 1; i >= 0; i--) {
                 const p = bloodParticles[i];
                 p.position.x += p.userData.vx;
                 p.position.y += p.userData.vy;
                 p.position.z += p.userData.vz;
-                p.userData.vy -= 0.007; // Gravity
+                p.userData.vy -= 0.007; 
                 p.userData.life -= 0.018;
                 p.material.opacity = p.userData.life;
                 
